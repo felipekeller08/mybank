@@ -355,6 +355,101 @@ themeToggle.addEventListener("click", () => {
   document.body.classList.toggle("light");
   themeToggle.textContent = document.body.classList.contains("light") ? "☀️" : "🌙";
 });
+// ======================= FUNÇÕES DE NEGÓCIO =======================
+
+// Estado inicial
+let wallet = 0;
+let savings = 0;
+let transactions = [];
+
+// Atualiza os valores na tela
+function updateValues() {
+  const total = wallet + savings;
+  document.getElementById("walletValue").textContent = "R$ " + wallet.toFixed(2);
+  document.getElementById("savingsValue").textContent = "R$ " + savings.toFixed(2);
+  document.getElementById("totalValue").textContent = "R$ " + total.toFixed(2);
+}
+
+// Aplicar salário
+window.applySalary = function () {
+  const salary = parseFloat(document.getElementById("salaryInput").value);
+  if (!isNaN(salary) && salary > 0) {
+    wallet += salary;
+    updateValues();
+    alert("Salário adicionado!");
+  } else {
+    alert("Informe um valor válido.");
+  }
+};
+
+// Aplicar guardado
+window.applySavings = function () {
+  const saved = parseFloat(document.getElementById("savingsInput").value);
+  if (!isNaN(saved) && saved > 0) {
+    savings = saved;
+    updateValues();
+    alert("Guardado atualizado!");
+  } else {
+    alert("Informe um valor válido.");
+  }
+};
+
+// Adicionar transação
+window.addTransaction = function () {
+  const type = document.getElementById("txType").value;
+  const amount = parseFloat(document.getElementById("txAmount").value);
+  const desc = document.getElementById("txDesc").value || "Sem descrição";
+
+  if (isNaN(amount) || amount <= 0) {
+    alert("Informe um valor válido.");
+    return;
+  }
+
+  if (type === "expense") wallet -= amount;
+  if (type === "income") wallet += amount;
+  if (type === "save") { wallet -= amount; savings += amount; }
+  if (type === "withdraw") { savings -= amount; wallet += amount; }
+
+  transactions.push({ type, amount, desc, date: new Date() });
+  updateValues();
+  alert("Transação registrada!");
+};
+
+// Relatórios
+window.updateReport = function () {
+  const month = document.getElementById("reportMonth").value;
+  if (!month) {
+    document.getElementById("reportText").textContent = "Selecione um mês.";
+    return;
+  }
+
+  const filtered = transactions.filter(tx =>
+    new Date(tx.date).toISOString().slice(0, 7) === month
+  );
+
+  let income = 0, expense = 0;
+  filtered.forEach(tx => {
+    if (tx.type === "income") income += tx.amount;
+    if (tx.type === "expense") expense += tx.amount;
+  });
+
+  document.getElementById("reportText").textContent =
+    `No mês ${month}, receitas: R$ ${income.toFixed(2)}, despesas: R$ ${expense.toFixed(2)}.`;
+};
+
+// Zerar tudo
+window.resetAll = function () {
+  if (confirm("Deseja realmente apagar todos os dados?")) {
+    wallet = 0;
+    savings = 0;
+    transactions = [];
+    updateValues();
+    alert("Todos os dados foram zerados.");
+  }
+};
+
+// Inicializa os valores
+updateValues();
 </script>
 </body>
 </html>
