@@ -231,6 +231,7 @@ html[data-theme="light"] .footer-logo-light{ display: block; }
   </div>
 
   <!-- RELATÓRIOS -->
+   <div id="txHistory" class="card" style="margin-top:20px;"></div>
   <div id="tab-relatorios" class="tab">
     <div class="card">
       <h2>Relatórios mensais</h2>
@@ -260,9 +261,15 @@ html[data-theme="light"] .footer-logo-light{ display: block; }
 <!-- Firebase -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
-  from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+import { 
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, 
+  signOut, onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+import { 
+  getFirestore, doc, setDoc, getDoc, updateDoc 
+} from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
+// ======================= CONFIG FIREBASE =======================
 const firebaseConfig = {
   apiKey: "AIzaSyDhD7P4n0p4reF5HHY1vx5HRxRQyG3paNA",
   authDomain: "mybank-63ff2.firebaseapp.com",
@@ -274,8 +281,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 
-// Referências
+// ======================= REFERÊNCIAS =======================
 const loginModal = document.getElementById("loginModal");
 const userBtn = document.getElementById("userBtn");
 const closeLogin = document.getElementById("closeLogin");
@@ -286,8 +294,9 @@ const authArea = document.getElementById("authArea");
 const userArea = document.getElementById("userArea");
 const userEmail = document.getElementById("userEmail");
 const themeToggle = document.getElementById("themeToggle");
+const txHistory = document.getElementById("txHistory");
 
-// Abrir / fechar modal
+// ======================= MODAL LOGIN =======================
 userBtn.onclick = () => loginModal.style.display = "flex";
 closeLogin.onclick = () => loginModal.style.display = "none";
 window.onclick = e => { if(e.target == loginModal) loginModal.style.display="none"; }
@@ -297,7 +306,15 @@ registerBtn.addEventListener("click", () => {
   const email = document.getElementById("loginEmail").value;
   const senha = document.getElementById("loginPassword").value;
   createUserWithEmailAndPassword(auth, email, senha)
-    .then(() => alert("Conta criada com sucesso!"))
+    .then(async (cred) => {
+      // cria documento inicial no Firestore
+      await setDoc(doc(db, "users", cred.user.uid), {
+        wallet: 0,
+        savings: 0,
+        transactions: []
+      });
+      alert("Conta criada com sucesso!");
+    })
     .catch(err => alert(err.message));
 });
 
@@ -312,34 +329,48 @@ loginBtn.addEventListener("click", () => {
 
 // Logout
 logoutBtn.addEventListener("click", () => {
-  signOut(auth).then(() => {
-    alert("Saiu da conta.");
-  });
+  signOut(auth).then(() => alert("Saiu da conta."));
 });
 
-// Monitorar auth
-onAuthStateChanged(auth, (user) => {
+// ======================= AUTENTICAÇÃO =======================
+let currentUserId = null;
+let wallet = 0;
+let savings = 0;
+let transactions = [];
+
+onAuthStateChanged(auth, async (user) => {
   if (user) {
+    currentUserId = user.uid;
     authArea.style.display = "none";
     userArea.style.display = "block";
     userEmail.textContent = user.email;
     loginModal.style.display = "none";
 
-    document.querySelectorAll(".nav-item").forEach(item => {
-      item.classList.remove("disabled");
-    });
+    document.querySelectorAll(".nav-item").forEach(item => item.classList.remove("disabled"));
+
+    // Buscar dados do Firestore
+    const ref = doc(db, "users", user.uid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data();
+      wallet = data.wallet || 0;
+      savings = data.savings || 0;
+      transactions = data.transactions || [];
+      updateValues();
+      renderTransactions();
+    }
+
   } else {
+    currentUserId = null;
     authArea.style.display = "block";
     userArea.style.display = "none";
     loginModal.style.display = "flex";
 
-    document.querySelectorAll(".nav-item").forEach(item => {
-      item.classList.add("disabled");
-    });
+    document.querySelectorAll(".nav-item").forEach(item => item.classList.add("disabled"));
   }
 });
 
-// Navegação entre abas
+// ======================= NAVEGAÇÃO =======================
 document.querySelectorAll(".nav-item").forEach(btn => {
   btn.addEventListener("click", () => {
     if(btn.classList.contains("disabled")) return;
@@ -350,19 +381,13 @@ document.querySelectorAll(".nav-item").forEach(btn => {
   });
 });
 
-// Toggle Tema
+// ======================= TEMA =======================
 themeToggle.addEventListener("click", () => {
   document.body.classList.toggle("light");
   themeToggle.textContent = document.body.classList.contains("light") ? "☀️" : "🌙";
 });
-// ======================= FUNÇÕES DE NEGÓCIO =======================
 
-// Estado inicial
-let wallet = 0;
-let savings = 0;
-let transactions = [];
-
-// Atualiza os valores na tela
+// ======================= FUNÇÕES =======================
 function updateValues() {
   const total = wallet + savings;
   document.getElementById("walletValue").textContent = "R$ " + wallet.toFixed(2);
@@ -370,12 +395,44 @@ function updateValues() {
   document.getElementById("totalValue").textContent = "R$ " + total.toFixed(2);
 }
 
+// Renderizar histórico
+function renderTransactions() {
+  txHistory.innerHTML = "";
+  if (transactions.length === 0) {
+    txHistory.innerHTML = "<p>Nenhuma transação registrada.</p>";
+    return;
+  }
+  transactions.slice().reverse().forEach(tx => {
+    const div = document.createElement("div");
+    div.classList.add("tx-item");
+    div.innerHTML = `
+      <strong>${tx.type.toUpperCase()}</strong> - R$ ${tx.amount.toFixed(2)}  
+      <br><small>${tx.desc}</small>  
+      <br><small>${new Date(tx.date).toLocaleString()}</small>
+      <hr>
+    `;
+    txHistory.appendChild(div);
+  });
+}
+
+// Salvar no Firestore
+async function saveData() {
+  if (!currentUserId) return;
+  const ref = doc(db, "users", currentUserId);
+  await updateDoc(ref, {
+    wallet,
+    savings,
+    transactions
+  });
+}
+
 // Aplicar salário
-window.applySalary = function () {
+window.applySalary = async function () {
   const salary = parseFloat(document.getElementById("salaryInput").value);
   if (!isNaN(salary) && salary > 0) {
     wallet += salary;
     updateValues();
+    await saveData();
     alert("Salário adicionado!");
   } else {
     alert("Informe um valor válido.");
@@ -383,11 +440,12 @@ window.applySalary = function () {
 };
 
 // Aplicar guardado
-window.applySavings = function () {
+window.applySavings = async function () {
   const saved = parseFloat(document.getElementById("savingsInput").value);
   if (!isNaN(saved) && saved > 0) {
     savings = saved;
     updateValues();
+    await saveData();
     alert("Guardado atualizado!");
   } else {
     alert("Informe um valor válido.");
@@ -395,7 +453,7 @@ window.applySavings = function () {
 };
 
 // Adicionar transação
-window.addTransaction = function () {
+window.addTransaction = async function () {
   const type = document.getElementById("txType").value;
   const amount = parseFloat(document.getElementById("txAmount").value);
   const desc = document.getElementById("txDesc").value || "Sem descrição";
@@ -410,8 +468,10 @@ window.addTransaction = function () {
   if (type === "save") { wallet -= amount; savings += amount; }
   if (type === "withdraw") { savings -= amount; wallet += amount; }
 
-  transactions.push({ type, amount, desc, date: new Date() });
+  transactions.push({ type, amount, desc, date: new Date().toISOString() });
   updateValues();
+  renderTransactions();
+  await saveData();
   alert("Transação registrada!");
 };
 
@@ -424,7 +484,7 @@ window.updateReport = function () {
   }
 
   const filtered = transactions.filter(tx =>
-    new Date(tx.date).toISOString().slice(0, 7) === month
+    tx.date.slice(0, 7) === month
   );
 
   let income = 0, expense = 0;
@@ -438,17 +498,18 @@ window.updateReport = function () {
 };
 
 // Zerar tudo
-window.resetAll = function () {
+window.resetAll = async function () {
   if (confirm("Deseja realmente apagar todos os dados?")) {
     wallet = 0;
     savings = 0;
     transactions = [];
     updateValues();
+    renderTransactions();
+    await saveData();
     alert("Todos os dados foram zerados.");
   }
 };
 
-// Inicializa os valores
 updateValues();
 </script>
 </body>
