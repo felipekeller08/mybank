@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>myBank</title>
 
-  <!-- PWA (opcional, mas recomendado) -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#003366">
+  <!-- PWA -->
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#0b0f14" />
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -78,7 +76,6 @@ button{border:none; cursor:pointer;}
 .btn:hover { filter: brightness(1.2); }
 button:active { transform: scale(0.95); transition: transform 0.1s; }
 
-/* ===== Modal Login ===== */
 .modal{
   display:none; position:fixed; top:0; left:0; width:100%; height:100%;
   background:rgba(0,0,0,.6); justify-content:center; align-items:center;
@@ -118,24 +115,25 @@ body.light #userBtn svg { color:#000; }
 .footer-content{ display:flex; flex-direction:column; align-items:center; justify-content:center; }
 .footer-logo{ max-width:180px; width:100%; height:auto; margin-bottom:6px; }
 .footer-text{ font-size:.9rem; max-width:360px; line-height:1.4; margin:0; color:var(--muted); }
+
+/* Cores do histórico */
+.tx-entrada{ color: var(--acc); font-weight:700; }
+.tx-saida{ color: var(--warn); font-weight:700; }
 </style>
 </head>
 <body>
 <header>
-  <!-- Logo Dark e Light -->
   <img src="/img/logo1.png" alt="myBank Logo Dark" class="logo-img logo-dark"/>
   <img src="/img/logo3.png" alt="myBank Logo Light" class="logo-img logo-light"/>
 
   <div class="subtitle">Carteira, guardado, transações e relatórios mensais.</div>
   
-  <!-- Botão usuário -->
   <button id="userBtn" style="position:absolute; top:16px; right:60px; background:none; border:none; cursor:pointer;">
     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 24 24">
       <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/>
     </svg>
   </button>
 
-  <!-- Botão tema -->
   <button id="themeToggle" style="position:absolute; top:16px; right:16px; background:none; border:none; cursor:pointer;" aria-label="Trocar tema">
     🌙
   </button>
@@ -163,7 +161,6 @@ body.light #userBtn svg { color:#000; }
   </div>
 </div>
 
-<!-- NAVBAR -->
 <nav class="navbar">
   <button class="nav-item active" data-tab="tab-saldos">Saldos</button>
   <button class="nav-item" data-tab="tab-inicio">Ganhos</button>
@@ -208,8 +205,8 @@ body.light #userBtn svg { color:#000; }
       <h2>Transações</h2>
       <label>Tipo</label>
       <select id="txType">
-        <option value="expense">Despesa</option>
-        <option value="income">Receita</option>
+        <option value="saida">Saída</option>
+        <option value="entrada">Entrada</option>
         <option value="save">Guardar</option>
         <option value="withdraw">Resgatar</option>
       </select>
@@ -245,7 +242,6 @@ body.light #userBtn svg { color:#000; }
 
 <footer class="footer">
   <div class="footer-content">
-    <!-- Duas versões da logo: uma para dark, outra para light -->
     <img src="/img/logo2.png" alt="myBank Logo Dark" class="footer-logo logo-dark"/>
     <img src="/img/logo4.png" alt="myBank Logo Light" class="footer-logo logo-light"/>
     <p class="footer-text">
@@ -265,7 +261,7 @@ import {
   getFirestore, doc, setDoc, getDoc 
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-/* ======================= CONFIG FIREBASE ======================= */
+/* ===== CONFIG FIREBASE ===== */
 const firebaseConfig = {
   apiKey: "AIzaSyDhD7P4n0p4reF5HHY1vx5HRxRQyG3paNA",
   authDomain: "mybank-63ff2.firebaseapp.com",
@@ -278,7 +274,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* ======================= REFERÊNCIAS ======================= */
+/* ===== REFERÊNCIAS ===== */
 const loginModal = document.getElementById("loginModal");
 const userBtn = document.getElementById("userBtn");
 const closeLogin = document.getElementById("closeLogin");
@@ -291,8 +287,7 @@ const userEmail = document.getElementById("userEmail");
 const themeToggle = document.getElementById("themeToggle");
 const txHistory = document.getElementById("txHistory");
 
-/* ======================= UI: tema + senha ======================= */
-// Tema persistente
+/* ===== UI: tema + senha ===== */
 (function initTheme(){
   const saved = localStorage.getItem("mybank-theme");
   if(saved === "light"){ document.body.classList.add("light"); themeToggle.textContent = "☀️"; }
@@ -303,8 +298,6 @@ themeToggle.addEventListener("click", () => {
   themeToggle.textContent = isLight ? "☀️" : "🌙";
   localStorage.setItem("mybank-theme", isLight ? "light" : "dark");
 });
-
-// olho da senha
 const passwordInput = document.getElementById("loginPassword");
 const togglePassword = document.getElementById("togglePassword");
 togglePassword.addEventListener("click", () => {
@@ -317,20 +310,11 @@ togglePassword.addEventListener("click", () => {
   }
 });
 
-/* ======================= MODAL LOGIN ======================= */
-userBtn.onclick = () => {
-  loginModal.style.display = "flex";
-  loginModal.setAttribute("aria-hidden", "false");
-};
-closeLogin.onclick = () => {
-  loginModal.style.display = "none";
-  loginModal.setAttribute("aria-hidden", "true");
-};
+/* ===== MODAL LOGIN ===== */
+userBtn.onclick = () => { loginModal.style.display = "flex"; loginModal.setAttribute("aria-hidden", "false"); };
+closeLogin.onclick = () => { loginModal.style.display = "none"; loginModal.setAttribute("aria-hidden", "true"); };
 window.addEventListener("click", (e) => {
-  if(e.target === loginModal){
-    loginModal.style.display = "none";
-    loginModal.setAttribute("aria-hidden", "true");
-  }
+  if(e.target === loginModal){ loginModal.style.display = "none"; loginModal.setAttribute("aria-hidden", "true"); }
 });
 
 // Registro
@@ -340,12 +324,7 @@ registerBtn.addEventListener("click", async () => {
   if(!email || !senha){ alert("Preencha email e senha."); return; }
   try{
     const cred = await createUserWithEmailAndPassword(auth, email, senha);
-    // cria documento inicial no Firestore (idempotente)
-    await setDoc(doc(db, "users", cred.user.uid), {
-      wallet: 0,
-      savings: 0,
-      transactions: []
-    }, { merge:true });
+    await setDoc(doc(db, "users", cred.user.uid), { wallet: 0, savings: 0, transactions: [] }, { merge:true });
     alert("Conta criada com sucesso!");
   }catch(err){ alert(err.message); }
 });
@@ -367,16 +346,15 @@ logoutBtn.addEventListener("click", async () => {
   alert("Saiu da conta.");
 });
 
-/* ======================= ESTADO ======================= */
+/* ===== ESTADO ===== */
 let currentUserId = null;
 let wallet = 0;
 let savings = 0;
 let transactions = [];
 
-/* Helpers */
 const BRL = v => (Number(v)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 
-/* ======================= AUTH ======================= */
+/* ===== AUTH ===== */
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUserId = user.uid;
@@ -387,7 +365,6 @@ onAuthStateChanged(auth, async (user) => {
     loginModal.setAttribute("aria-hidden", "true");
     document.querySelectorAll(".nav-item").forEach(i=>i.classList.remove("disabled"));
 
-    // Buscar dados do Firestore
     const ref = doc(db, "users", user.uid);
     const snap = await getDoc(ref);
     if (snap.exists()) {
@@ -408,14 +385,13 @@ onAuthStateChanged(auth, async (user) => {
     loginModal.style.display = "flex";
     loginModal.setAttribute("aria-hidden", "false");
     document.querySelectorAll(".nav-item").forEach(i=>i.classList.add("disabled"));
-    // limpa UI (não mexe nos dados persistidos)
     wallet=0; savings=0; transactions=[];
     updateValues();
     txHistory.innerHTML="";
   }
 });
 
-/* ======================= NAVEGAÇÃO ======================= */
+/* ===== NAVEGAÇÃO ===== */
 document.querySelectorAll(".nav-item").forEach(btn => {
   btn.addEventListener("click", () => {
     if(btn.classList.contains("disabled")) return;
@@ -426,7 +402,7 @@ document.querySelectorAll(".nav-item").forEach(btn => {
   });
 });
 
-/* ======================= FUNÇÕES ======================= */
+/* ===== FUNÇÕES ===== */
 function updateValues() {
   const total = wallet + savings;
   document.getElementById("walletValue").textContent = BRL(wallet);
@@ -441,11 +417,15 @@ function renderTransactions() {
     return;
   }
   transactions.slice().reverse().forEach(tx => {
+    const isEntrada = tx.type === "entrada";
+    const isSaida = tx.type === "saida";
+    const label = isEntrada ? "ENTRADA" : (isSaida ? "SAÍDA" : tx.type.toUpperCase());
+    const cls = isEntrada ? "tx-entrada" : (isSaida ? "tx-saida" : "");
     const div = document.createElement("div");
     div.className = "tx-item";
     div.style.marginBottom = "10px";
     div.innerHTML = `
-      <strong>${tx.type.toUpperCase()}</strong> • ${BRL(tx.amount)}
+      <strong class="${cls}">${label}</strong> • ${BRL(tx.amount)}
       <br><small>${tx.desc || "Sem descrição"}</small>
       <br><small>${new Date(tx.date).toLocaleString("pt-BR")}</small>
       <hr style="border-color:var(--line)">
@@ -454,22 +434,16 @@ function renderTransactions() {
   });
 }
 
-// Salvar (idempotente)
 async function saveData() {
   if (!currentUserId) return;
   const ref = doc(db, "users", currentUserId);
-  await setDoc(ref, {
-    wallet,
-    savings,
-    transactions
-  }, { merge:true });
+  await setDoc(ref, { wallet, savings, transactions }, { merge:true });
 }
 
-// Aplicar salário
 window.applySalary = async function () {
   if(!currentUserId){ alert("Entre na sua conta para salvar."); return; }
   const el = document.getElementById("salaryInput");
-  const salary = parseFloat(el.value.replace(',', '.'));
+  const salary = parseFloat((el.value||"").replace(',', '.'));
   if (!isNaN(salary) && salary > 0) {
     wallet += salary;
     el.value = "";
@@ -481,11 +455,10 @@ window.applySalary = async function () {
   }
 };
 
-// Aplicar guardado
 window.applySavings = async function () {
   if(!currentUserId){ alert("Entre na sua conta para salvar."); return; }
   const el = document.getElementById("savingsInput");
-  const saved = parseFloat(el.value.replace(',', '.'));
+  const saved = parseFloat((el.value||"").replace(',', '.'));
   if (!isNaN(saved) && saved >= 0) {
     savings = saved;
     el.value = "";
@@ -497,10 +470,9 @@ window.applySavings = async function () {
   }
 };
 
-// Adicionar transação
 window.addTransaction = async function () {
   if(!currentUserId){ alert("Entre na sua conta para salvar."); return; }
-  const type = document.getElementById("txType").value;
+  const type = document.getElementById("txType").value; // "entrada" | "saida" | "save" | "withdraw"
   const amountEl = document.getElementById("txAmount");
   const descEl = document.getElementById("txDesc");
   const amount = parseFloat((amountEl.value || "0").replace(',', '.'));
@@ -509,33 +481,24 @@ window.addTransaction = async function () {
   if (isNaN(amount) || amount <= 0) { alert("Informe um valor válido."); return; }
 
   // Regras de saldo
-  if (type === "expense" && wallet - amount < 0) {
-    alert("Saldo insuficiente na carteira.");
-    return;
-  }
-  if (type === "save") {
-    if (wallet - amount < 0) { alert("Saldo insuficiente para guardar."); return; }
-  }
-  if (type === "withdraw") {
-    if (savings - amount < 0) { alert("Guardado insuficiente para resgatar."); return; }
-  }
+  if (type === "saida" && wallet - amount < 0) { alert("Saldo insuficiente na carteira."); return; }
+  if (type === "save" && wallet - amount < 0) { alert("Saldo insuficiente para guardar."); return; }
+  if (type === "withdraw" && savings - amount < 0) { alert("Guardado insuficiente para resgatar."); return; }
 
   // Aplica efeitos
-  if (type === "expense") wallet -= amount;
-  if (type === "income")  wallet += amount;
+  if (type === "saida")   wallet -= amount;
+  if (type === "entrada") wallet += amount;
   if (type === "save")   { wallet -= amount; savings += amount; }
   if (type === "withdraw"){ savings -= amount; wallet += amount; }
 
   transactions.push({ type, amount:Number(amount), desc, date: new Date().toISOString() });
-  amountEl.value = "";
-  descEl.value = "";
+  amountEl.value = ""; descEl.value = "";
   updateValues();
   renderTransactions();
   await saveData();
   alert("Transação registrada!");
 };
 
-// Relatórios
 window.updateReport = function () {
   const month = document.getElementById("reportMonth").value;
   if (!month) {
@@ -545,14 +508,13 @@ window.updateReport = function () {
   const filtered = transactions.filter(tx => (tx.date || "").slice(0, 7) === month);
   let income = 0, expense = 0;
   filtered.forEach(tx => {
-    if (tx.type === "income") income += Number(tx.amount)||0;
-    if (tx.type === "expense") expense += Number(tx.amount)||0;
+    if (tx.type === "entrada") income += Number(tx.amount)||0;
+    if (tx.type === "saida")   expense += Number(tx.amount)||0;
   });
   document.getElementById("reportText").textContent =
-    `No mês ${month}, receitas: ${BRL(income)}, despesas: ${BRL(expense)}.`;
+    `No mês ${month}, entradas: ${BRL(income)}, saídas: ${BRL(expense)}.`;
 };
 
-// Zerar tudo
 window.resetAll = async function () {
   if(!currentUserId){ alert("Entre na sua conta."); return; }
   if (confirm("Deseja realmente apagar todos os dados?")) {
@@ -563,17 +525,16 @@ window.resetAll = async function () {
   }
 };
 
-// Inicializa UI
 updateValues();
 </script>
 
-<!-- Registro do Service Worker (PWA) -->
+<!-- Service Worker -->
 <script>
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js")
+  navigator.serviceWorker.register("/service-worker.js")
     .then(() => console.log("Service Worker registrado!"))
-    .catch(err => console.log("Erro no SW:", err));}
- 
+    .catch(err => console.log("Erro no SW:", err));
+}
 </script>
 </body>
 </html>
