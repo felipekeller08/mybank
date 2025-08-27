@@ -4,6 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>myBank</title>
+
+  <!-- PWA (opcional, mas recomendado) -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#003366">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0b0f14" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="myBank">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+
 <style>
 :root{
   --bg:#0b0f14; --card:#121823; --muted:#7a8699; --txt:#e9eef7;
@@ -100,8 +113,8 @@ body.light #userBtn svg { color:#000; }
   cursor:pointer; font-size:18px; user-select:none;
 }
 
-/* Rodapé */
-.footer{ padding: 20px; text-align: center; margin-top: auto; }
+/* Rodapé (transparente) */
+.footer{ padding: 20px; text-align: center; margin-top: auto; background: transparent; }
 .footer-content{ display:flex; flex-direction:column; align-items:center; justify-content:center; }
 .footer-logo{ max-width:180px; width:100%; height:auto; margin-bottom:6px; }
 .footer-text{ font-size:.9rem; max-width:360px; line-height:1.4; margin:0; color:var(--muted); }
@@ -123,25 +136,24 @@ body.light #userBtn svg { color:#000; }
   </button>
 
   <!-- Botão tema -->
-  <button id="themeToggle" style="position:absolute; top:16px; right:16px; background:none; border:none; cursor:pointer;">
+  <button id="themeToggle" style="position:absolute; top:16px; right:16px; background:none; border:none; cursor:pointer;" aria-label="Trocar tema">
     🌙
   </button>
 </header>
 
 <!-- Modal Login -->
-<div id="loginModal" class="modal">
-  <div class="modal-content">
-    <button class="close-btn" id="closeLogin">✖</button>
+<div id="loginModal" class="modal" aria-hidden="true">
+  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+    <button class="close-btn" id="closeLogin" aria-label="Fechar">✖</button>
     <div id="authArea">
-      <h2>Login</h2>
+      <h2 id="loginTitle">Login</h2>
       <input type="email" id="loginEmail" placeholder="Seu email" autocomplete="username" />
       <div class="password-wrap">
         <input type="password" id="loginPassword" placeholder="Sua senha" autocomplete="current-password"/>
-        <span id="togglePassword" title="Mostrar/ocultar senha">👁️</span>
+        <span id="togglePassword" title="Mostrar/ocultar senha" aria-label="Mostrar/ocultar senha">👁️</span>
       </div>
       <button class="btn primary" id="loginBtn" style="width:100%;margin-top:10px">Entrar</button>
       <button class="btn" id="registerBtn" style="width:100%;margin-top:10px">Criar conta</button>
-      <p class="hint" style="margin-top:12px;">Autenticação via Firebase 🔐</p>
     </div>
     <div id="userArea" style="display:none;">
       <h2>Bem-vindo!</h2>
@@ -181,11 +193,11 @@ body.light #userBtn svg { color:#000; }
     <div class="card">
       <h2>Iniciar mês</h2>
       <label>Salário do mês</label>
-      <input type="number" step="0.01" id="salaryInput" placeholder="Ex: 2000,00"/>
+      <input type="number" step="0.01" id="salaryInput" placeholder="Ex: 2000,00" inputmode="decimal"/>
       <button class="btn primary" style="margin-top:10px;width:100%" onclick="applySalary()">Aplicar salário</button>
       <hr>
       <label>Definir valor já guardado</label>
-      <input type="number" step="0.01" id="savingsInput" placeholder="Ex: 500,00"/>
+      <input type="number" step="0.01" id="savingsInput" placeholder="Ex: 500,00" inputmode="decimal"/>
       <button class="btn" style="margin-top:10px;width:100%" onclick="applySavings()">Aplicar guardado</button>
     </div>
   </div>
@@ -202,7 +214,7 @@ body.light #userBtn svg { color:#000; }
         <option value="withdraw">Resgatar</option>
       </select>
       <label>Valor</label>
-      <input type="number" step="0.01" id="txAmount" placeholder="0,00"/>
+      <input type="number" step="0.01" id="txAmount" placeholder="0,00" inputmode="decimal"/>
       <label>Descrição</label>
       <input type="text" id="txDesc" placeholder="Ex: Mercado"/>
       <button class="btn primary" style="margin-top:10px;width:100%" onclick="addTransaction()">Adicionar</button>
@@ -280,9 +292,16 @@ const themeToggle = document.getElementById("themeToggle");
 const txHistory = document.getElementById("txHistory");
 
 /* ======================= UI: tema + senha ======================= */
+// Tema persistente
+(function initTheme(){
+  const saved = localStorage.getItem("mybank-theme");
+  if(saved === "light"){ document.body.classList.add("light"); themeToggle.textContent = "☀️"; }
+})();
 themeToggle.addEventListener("click", () => {
   document.body.classList.toggle("light");
-  themeToggle.textContent = document.body.classList.contains("light") ? "☀️" : "🌙";
+  const isLight = document.body.classList.contains("light");
+  themeToggle.textContent = isLight ? "☀️" : "🌙";
+  localStorage.setItem("mybank-theme", isLight ? "light" : "dark");
 });
 
 // olho da senha
@@ -299,9 +318,20 @@ togglePassword.addEventListener("click", () => {
 });
 
 /* ======================= MODAL LOGIN ======================= */
-userBtn.onclick = () => loginModal.style.display = "flex";
-closeLogin.onclick = () => loginModal.style.display = "none";
-window.onclick = e => { if(e.target == loginModal) loginModal.style.display="none"; }
+userBtn.onclick = () => {
+  loginModal.style.display = "flex";
+  loginModal.setAttribute("aria-hidden", "false");
+};
+closeLogin.onclick = () => {
+  loginModal.style.display = "none";
+  loginModal.setAttribute("aria-hidden", "true");
+};
+window.addEventListener("click", (e) => {
+  if(e.target === loginModal){
+    loginModal.style.display = "none";
+    loginModal.setAttribute("aria-hidden", "true");
+  }
+});
 
 // Registro
 registerBtn.addEventListener("click", async () => {
@@ -354,6 +384,7 @@ onAuthStateChanged(auth, async (user) => {
     userArea.style.display = "block";
     userEmail.textContent = user.email;
     loginModal.style.display = "none";
+    loginModal.setAttribute("aria-hidden", "true");
     document.querySelectorAll(".nav-item").forEach(i=>i.classList.remove("disabled"));
 
     // Buscar dados do Firestore
@@ -365,7 +396,6 @@ onAuthStateChanged(auth, async (user) => {
       savings = Number(data.savings)||0;
       transactions = Array.isArray(data.transactions) ? data.transactions : [];
     } else {
-      // primeiro login sem doc — garante doc vazio
       await setDoc(ref, { wallet:0, savings:0, transactions:[] }, {merge:true});
       wallet=0; savings=0; transactions=[];
     }
@@ -376,6 +406,7 @@ onAuthStateChanged(auth, async (user) => {
     authArea.style.display = "block";
     userArea.style.display = "none";
     loginModal.style.display = "flex";
+    loginModal.setAttribute("aria-hidden", "false");
     document.querySelectorAll(".nav-item").forEach(i=>i.classList.add("disabled"));
     // limpa UI (não mexe nos dados persistidos)
     wallet=0; savings=0; transactions=[];
@@ -437,9 +468,11 @@ async function saveData() {
 // Aplicar salário
 window.applySalary = async function () {
   if(!currentUserId){ alert("Entre na sua conta para salvar."); return; }
-  const salary = parseFloat(document.getElementById("salaryInput").value);
+  const el = document.getElementById("salaryInput");
+  const salary = parseFloat(el.value.replace(',', '.'));
   if (!isNaN(salary) && salary > 0) {
     wallet += salary;
+    el.value = "";
     updateValues();
     await saveData();
     alert("Salário adicionado!");
@@ -451,9 +484,11 @@ window.applySalary = async function () {
 // Aplicar guardado
 window.applySavings = async function () {
   if(!currentUserId){ alert("Entre na sua conta para salvar."); return; }
-  const saved = parseFloat(document.getElementById("savingsInput").value);
+  const el = document.getElementById("savingsInput");
+  const saved = parseFloat(el.value.replace(',', '.'));
   if (!isNaN(saved) && saved >= 0) {
     savings = saved;
+    el.value = "";
     updateValues();
     await saveData();
     alert("Guardado atualizado!");
@@ -466,17 +501,34 @@ window.applySavings = async function () {
 window.addTransaction = async function () {
   if(!currentUserId){ alert("Entre na sua conta para salvar."); return; }
   const type = document.getElementById("txType").value;
-  const amount = parseFloat(document.getElementById("txAmount").value);
-  const desc = (document.getElementById("txDesc").value || "Sem descrição").trim();
+  const amountEl = document.getElementById("txAmount");
+  const descEl = document.getElementById("txDesc");
+  const amount = parseFloat((amountEl.value || "0").replace(',', '.'));
+  const desc = (descEl.value || "Sem descrição").trim();
 
   if (isNaN(amount) || amount <= 0) { alert("Informe um valor válido."); return; }
 
+  // Regras de saldo
+  if (type === "expense" && wallet - amount < 0) {
+    alert("Saldo insuficiente na carteira.");
+    return;
+  }
+  if (type === "save") {
+    if (wallet - amount < 0) { alert("Saldo insuficiente para guardar."); return; }
+  }
+  if (type === "withdraw") {
+    if (savings - amount < 0) { alert("Guardado insuficiente para resgatar."); return; }
+  }
+
+  // Aplica efeitos
   if (type === "expense") wallet -= amount;
   if (type === "income")  wallet += amount;
   if (type === "save")   { wallet -= amount; savings += amount; }
   if (type === "withdraw"){ savings -= amount; wallet += amount; }
 
   transactions.push({ type, amount:Number(amount), desc, date: new Date().toISOString() });
+  amountEl.value = "";
+  descEl.value = "";
   updateValues();
   renderTransactions();
   await saveData();
@@ -513,6 +565,15 @@ window.resetAll = async function () {
 
 // Inicializa UI
 updateValues();
+</script>
+
+<!-- Registro do Service Worker (PWA) -->
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js")
+    .then(() => console.log("Service Worker registrado!"))
+    .catch(err => console.log("Erro no SW:", err));}
+ 
 </script>
 </body>
 </html>
