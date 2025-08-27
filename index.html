@@ -196,8 +196,8 @@ body.light #userBtn svg { color:#000; }
       <h2>Transações</h2>
       <label>Tipo</label>
       <select id="txType">
-        <option value="expense">Despesa</option>
-        <option value="income">Receita</option>
+        <option value="saiu">Despesa</option>
+        <option value="entrou">Receita</option>
         <option value="save">Guardar</option>
         <option value="withdraw">Resgatar</option>
       </select>
@@ -471,8 +471,8 @@ window.addTransaction = async function () {
 
   if (isNaN(amount) || amount <= 0) { alert("Informe um valor válido."); return; }
 
-  if (type === "expense") wallet -= amount;
-  if (type === "income")  wallet += amount;
+  if (type === "saiu") wallet -= amount;
+  if (type === "entrou")  wallet += amount;
   if (type === "save")   { wallet -= amount; savings += amount; }
   if (type === "withdraw"){ savings -= amount; wallet += amount; }
 
@@ -491,13 +491,13 @@ window.updateReport = function () {
     return;
   }
   const filtered = transactions.filter(tx => (tx.date || "").slice(0, 7) === month);
-  let income = 0, expense = 0;
+  let entrou = 0, saiu = 0;
   filtered.forEach(tx => {
-    if (tx.type === "income") income += Number(tx.amount)||0;
-    if (tx.type === "expense") expense += Number(tx.amount)||0;
+    if (tx.type === "entrou") entrou += Number(tx.amount)||0;
+    if (tx.type === "saiu") saiu += Number(tx.amount)||0;
   });
   document.getElementById("reportText").textContent =
-    `No mês ${month}, receitas: ${BRL(income)}, despesas: ${BRL(expense)}.`;
+    `No mês ${month}, receitas: ${BRL(entrou)}, despesas: ${BRL(saiu)}.`;
 };
 
 // Zerar tudo
