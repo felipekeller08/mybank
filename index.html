@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>myBank</title>
+<style>
+:root{
+  --bg:#0b0f14; --card:#121823; --muted:#7a8699; --txt:#e9eef7;
+  --acc:#39d98a; --warn:#ff6b6b; --line:#1c2431; --focus:#6aa9ff;
+  --shadow:0 8px 30px rgba(0,0,0,.35); --radius:18px;
+}
+.light {
+  --bg:#f4f6f9; --card:#ffffff; --muted:#555; --txt:#111;
+  --acc:#1ca563; --warn:#c62828; --line:#ccc; --focus:#1767ff;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial,sans-serif;
+  background:var(--bg); color:var(--txt);
+  display:flex; flex-direction:column; transition:background .3s,color .3s;
+}
+header{padding:16px; text-align:center; position:relative;}
+.logo-img{height:64px; display:block; margin:0 auto}
+.subtitle{color:var(--muted); font-size:13px; margin-top:6px}
+main{flex:1; overflow-y:auto; padding:16px;}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:18px; margin-bottom:20px;
+  transition:background .3s,color .3s;
+}
+.card h2{margin:0 0 12px; font-size:18px; color:#2a7cff}
+.tab{display:none; animation:fade .3s}
+.tab.active{display:block}
+@keyframes fade{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)}}
+.navbar{
+  display:flex; justify-content:center; align-items:center; padding:10px;
+  background:#101621; border-top:1px solid #1f2a3a; position:sticky; bottom:0;
+}
+.light .navbar { background:#e9edf5; border-top:1px solid #ccc; }
+.navbar button{
+  flex:1; background:none; border:none; color:var(--muted);
+  padding:10px; font-size:13px; cursor:pointer; transition:.2s;
+}
+.navbar button.active{color:#2a7cff; font-weight:600}
+.value{font-weight:800; font-size:22px}
+.value.positive{color:var(--acc)} .value.negative{color:var(--warn)}
+.hint{color:var(--muted); font-size:12px}
+input, select, button{font:inherit; border-radius:12px; padding:12px;}
+input, select{width:100%; background:#0f1521; border:1px solid #1f2a3a; color:var(--txt);}
+.light input, .light select { background:#f8f9fb; border:1px solid #ccc; color:#111; }
+button{border:none; cursor:pointer;}
+.btn{background:#1a2333; color:#fff}
+.btn.primary{background:linear-gradient(180deg,#2a7cff,#1767ff)}
+.btn.danger{background:#3a1f26; color:#ffb3b3}
+.btn:hover { filter: brightness(1.2); }
+button:active { transform: scale(0.95); transition: transform 0.1s; }
+
+/* ===== Modal Login ===== */
+.modal{
+  display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,.6); justify-content:center; align-items:center;
+}
+.modal-content{
+  background:var(--card); border-radius:var(--radius); padding:24px;
+  width:90%; max-width:400px; box-shadow:var(--shadow); text-align:center; position:relative;
+  transition:background .3s,color .3s;
+}
+.modal-content h2{margin-bottom:16px; color:#2a7cff}
+.modal-content input{margin-bottom:12px}
+.close-btn{
+  position:absolute; top:12px; right:12px; font-size:20px; color:var(--muted);
+  background:none; border:none; cursor:pointer;
+}
+.nav-item.disabled {
+  pointer-events: none; 
+  opacity: 0.5; 
+}
+.logo-dark { display:block; }
+.logo-light { display:none; }
+.light .logo-dark { display:none; }
+.light .logo-light { display:block; }
+/* Ícone do usuário */
+#userBtn svg {
+  color: #fff; /* branco padrão */
+  transition: color 0.3s;
+}
+
+body.light #userBtn svg {
+  color: #000; /* preto no modo claro */
+}
+/* Rodapé sempre no fim da tela */
+.footer{
+  background: var(--bg-color);
+  padding: 20px;
+  text-align: center;
+  margin-top: auto;      /* empurra o footer para o final */
+}
+
+.footer-content{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Tamanho da logo e espaçamento colado no texto */
+.footer-logo{
+  max-width: 180px;      /* ajuste livre */
+  width: 100%;
+  height: auto;
+  margin-bottom: 6px;    /* coladinha no texto */
+}
+
+/* Por padrão, no tema dark mostramos a dark e escondemos a light */
+.footer-logo-dark{ display: block; }
+.footer-logo-light{ display: none; }
+
+/* Quando for tema claro, invertemos */
+html[data-theme="light"] .footer-logo-dark{ display: none; }
+html[data-theme="light"] .footer-logo-light{ display: block; }
+
+/* Texto do rodapé compacto */
+.footer-text{
+  font-size: .9rem;
+  color: var(--text-color);
+  max-width: 360px;
+  line-height: 1.4;
+  margin: 0;
+}
+</style>
+</head>
+<body>
+<header>
+  <!-- Logo Dark e Light -->
+  <img src="/img/logo1.png" alt="myBank Logo Dark" class="logo-img logo-dark"/>
+  <img src="/img/logo3.png" alt="myBank Logo Light" class="logo-img logo-light"/>
+
+  <div class="subtitle">Carteira, guardado, transações e relatórios mensais.</div>
+  
+  <!-- Botão usuário -->
+  <button id="userBtn" style="position:absolute; top:16px; right:60px; background:none; border:none; cursor:pointer;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/>
+    </svg>
+  </button>
+
+  <!-- Botão tema -->
+  <button id="themeToggle" style="position:absolute; top:16px; right:16px; background:none; border:none; cursor:pointer;">
+    🌙
+  </button>
+</header>
+
+<!-- Modal Login -->
+<div id="loginModal" class="modal">
+  <div class="modal-content">
+    <button class="close-btn" id="closeLogin">✖</button>
+    <div id="authArea">
+      <h2>Login</h2>
+      <input type="email" id="loginEmail" placeholder="Seu email"/>
+      <input type="password" id="loginPassword" placeholder="Sua senha"/>
+      <button class="btn primary" id="loginBtn" style="width:100%;margin-top:10px">Entrar</button>
+      <button class="btn" id="registerBtn" style="width:100%;margin-top:10px">Criar conta</button>
+      <p class="hint" style="margin-top:12px;">Autenticação via Firebase 🔐</p>
+    </div>
+    <div id="userArea" style="display:none;">
+      <h2>Bem-vindo!</h2>
+      <p id="userEmail" class="hint"></p>
+      <button class="btn danger" id="logoutBtn" style="width:100%;margin-top:10px">Sair</button>
+    </div>
+  </div>
+</div>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <button class="nav-item active" data-tab="tab-saldos">Saldos</button>
+  <button class="nav-item" data-tab="tab-inicio">Ganhos</button>
+  <button class="nav-item" data-tab="tab-transacoes">Transações</button>
+  <button class="nav-item" data-tab="tab-relatorios">Relatórios</button>
+  <button class="nav-item" data-tab="tab-ferramentas">Ferramentas</button>
+</nav>
+
+<main>
+  <!-- SALDOS -->
+  <div id="tab-saldos" class="tab active">
+    <div class="card">
+      <h2>Saldos</h2>
+      <p>Carteira (disponível)</p>
+      <div id="walletValue" class="value positive">R$ 0,00</div>
+      <hr>
+      <p>Guardado</p>
+      <div id="savingsValue" class="value">R$ 0,00</div>
+      <hr>
+      <p>Total</p>
+      <div id="totalValue" class="value">R$ 0,00</div>
+    </div>
+  </div>
+
+  <!-- GANHOS -->
+  <div id="tab-inicio" class="tab">
+    <div class="card">
+      <h2>Iniciar mês</h2>
+      <label>Salário do mês</label>
+      <input type="number" id="salaryInput" placeholder="Ex: 2000,00"/>
+      <button class="btn primary" style="margin-top:10px;width:100%" onclick="applySalary()">Aplicar salário</button>
+      <hr>
+      <label>Definir valor já guardado</label>
+      <input type="number" id="savingsInput" placeholder="Ex: 500,00"/>
+      <button class="btn" style="margin-top:10px;width:100%" onclick="applySavings()">Aplicar guardado</button>
+    </div>
+  </div>
+
+  <!-- TRANSAÇÕES -->
+  <div id="tab-transacoes" class="tab">
+    <div class="card">
+      <h2>Transações</h2>
+      <label>Tipo</label>
+      <select id="txType">
+        <option value="expense">Despesa</option>
+        <option value="income">Receita</option>
+        <option value="save">Guardar</option>
+        <option value="withdraw">Resgatar</option>
+      </select>
+      <label>Valor</label>
+      <input type="number" id="txAmount" placeholder="0,00"/>
+      <label>Descrição</label>
+      <input type="text" id="txDesc" placeholder="Ex: Mercado"/>
+      <button class="btn primary" style="margin-top:10px;width:100%" onclick="addTransaction()">Adicionar</button>
+    </div>
+  </div>
+
+  <!-- RELATÓRIOS -->
+  <div id="tab-relatorios" class="tab">
+    <div class="card">
+      <h2>Relatórios mensais</h2>
+      <input type="month" id="reportMonth" onchange="updateReport()" style="margin:10px 0;"/>
+      <p id="reportText" class="hint">Resumo dos dados aparecerá aqui.</p>
+    </div>
+  </div>
+
+  <!-- FERRAMENTAS -->
+  <div id="tab-ferramentas" class="tab">
+    <div class="card">
+      <h2>Ferramentas</h2>
+      <button class="btn danger" style="width:100%" onclick="resetAll()">Zerar tudo</button>
+    </div>
+  </div>
+</main>
+<footer class="footer">
+  <div class="footer-content">
+    <!-- Duas versões da logo: uma para dark, outra para light -->
+    <img src="/img/logo2.png" alt="myBank Logo Dark" class="logo-img logo-dark"/>
+    <img src="/img/logo4.png" alt="myBank Logo Light" class="logo-img logo-light"/>
+    <p class="footer-text">
+      o <strong>myBank</strong> te ajuda a cuidar do seu dinheiro, te deixando mais tranquilo e confiante.
+    </p>
+  </div>
+</footer>
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
+  from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDhD7P4n0p4reF5HHY1vx5HRxRQyG3paNA",
+  authDomain: "mybank-63ff2.firebaseapp.com",
+  projectId: "mybank-63ff2",
+  storageBucket: "mybank-63ff2.appspot.com",
+  messagingSenderId: "389173665987",
+  appId: "1:389173665987:web:a86473d5a3b5bffce84276"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// Referências
+const loginModal = document.getElementById("loginModal");
+const userBtn = document.getElementById("userBtn");
+const closeLogin = document.getElementById("closeLogin");
+const loginBtn = document.getElementById("loginBtn");
+const registerBtn = document.getElementById("registerBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const authArea = document.getElementById("authArea");
+const userArea = document.getElementById("userArea");
+const userEmail = document.getElementById("userEmail");
+const themeToggle = document.getElementById("themeToggle");
+
+// Abrir / fechar modal
+userBtn.onclick = () => loginModal.style.display = "flex";
+closeLogin.onclick = () => loginModal.style.display = "none";
+window.onclick = e => { if(e.target == loginModal) loginModal.style.display="none"; }
+
+// Registro
+registerBtn.addEventListener("click", () => {
+  const email = document.getElementById("loginEmail").value;
+  const senha = document.getElementById("loginPassword").value;
+  createUserWithEmailAndPassword(auth, email, senha)
+    .then(() => alert("Conta criada com sucesso!"))
+    .catch(err => alert(err.message));
+});
+
+// Login
+loginBtn.addEventListener("click", () => {
+  const email = document.getElementById("loginEmail").value;
+  const senha = document.getElementById("loginPassword").value;
+  signInWithEmailAndPassword(auth, email, senha)
+    .then(() => alert("Login realizado!"))
+    .catch(err => alert(err.message));
+});
+
+// Logout
+logoutBtn.addEventListener("click", () => {
+  signOut(auth).then(() => {
+    alert("Saiu da conta.");
+  });
+});
+
+// Monitorar auth
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    authArea.style.display = "none";
+    userArea.style.display = "block";
+    userEmail.textContent = user.email;
+    loginModal.style.display = "none";
+
+    document.querySelectorAll(".nav-item").forEach(item => {
+      item.classList.remove("disabled");
+    });
+  } else {
+    authArea.style.display = "block";
+    userArea.style.display = "none";
+    loginModal.style.display = "flex";
+
+    document.querySelectorAll(".nav-item").forEach(item => {
+      item.classList.add("disabled");
+    });
+  }
+});
+
+// Navegação entre abas
+document.querySelectorAll(".nav-item").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if(btn.classList.contains("disabled")) return;
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active"));
+    document.getElementById(btn.dataset.tab).classList.add("active");
+    btn.classList.add("active");
+  });
+});
+
+// Toggle Tema
+themeToggle.addEventListener("click", () => {
+  document.body.classList.toggle("light");
+  themeToggle.textContent = document.body.classList.contains("light") ? "☀️" : "🌙";
+});
+</script>
+</body>
+</html>
