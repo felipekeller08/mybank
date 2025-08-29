@@ -55,6 +55,8 @@ button{border:none; cursor:pointer;}
 .btn{background:#1a2333; color:#fff}
 .btn.primary{background:linear-gradient(180deg,#2a7cff,#1767ff)}
 .btn.danger{background:#3a1f26; color:#ffb3b3}
+.btn-trocs{background: #1e4734; color:#1ca563}
+.btn-trocs:hover{background: #177449; color:#12d67b}
 .btn:hover { filter: brightness(1.2); }
 button:active { transform: scale(0.95); transition: transform 0.1s; }
 
@@ -122,6 +124,8 @@ body.light #userBtn svg { color:#000; }
 .banner.ok{ border-color:#1e4734; color:#9de5c0; }
 .trocando{
     display: flex;
-    justify-content: space-between;
-    gap: 10px;
+    flex-direction: column-reverse;
+    justify-content: center;
+    align-items: center;
+    gap: 45px;
 }
