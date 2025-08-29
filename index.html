@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>myBank</title>
 
   <!-- PWA -->
@@ -15,526 +16,229 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
 
-<style>
-:root{
-  --bg:#0b0f14; --card:#121823; --muted:#7a8699; --txt:#e9eef7;
-  --acc:#39d98a; --warn:#ff6b6b; --line:#1c2431; --focus:#6aa9ff;
-  --shadow:0 8px 30px rgba(0,0,0,.35); --radius:18px;
-}
-.light {
-  --bg:#f4f6f9; --card:#ffffff; --muted:#555; --txt:#111;
-  --acc:#1ca563; --warn:#c62828; --line:#ccc; --focus:#1767ff;
-}
-
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial,sans-serif;
-  background:var(--bg); color:var(--txt);
-  display:flex; flex-direction:column; transition:background .3s,color .3s;
-}
-
-header{padding:16px; text-align:center; position:relative;}
-.logo-img{height:64px; display:block; margin:0 auto}
-.subtitle{color:var(--muted); font-size:13px; margin-top:6px}
-
-main{flex:1; overflow-y:auto; padding:16px;}
-
-.card{
-  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
-  box-shadow:var(--shadow); padding:18px; margin-bottom:20px;
-  transition:background .3s,color .3s;
-}
-.card h2{margin:0 0 12px; font-size:18px; color:#2a7cff}
-
-.tab{display:none; animation:fade .3s}
-.tab.active{display:block}
-@keyframes fade{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)}}
-
-.navbar{
-  display:flex; justify-content:center; align-items:center; padding:10px;
-  background:#101621; border-top:1px solid #1f2a3a; position:sticky; bottom:0;
-}
-.light .navbar { background:#e9edf5; border-top:1px solid #ccc; }
-.navbar button{
-  flex:1; background:none; border:none; color:var(--muted);
-  padding:10px; font-size:13px; cursor:pointer; transition:.2s;
-}
-.navbar button.active{color:#2a7cff; font-weight:600}
-
-.value{font-weight:800; font-size:22px}
-.value.positive{color:var(--acc)} .value.negative{color:var(--warn)}
-.hint{color:var(--muted); font-size:12px}
-
-input, select, button{font:inherit; border-radius:12px; padding:12px;}
-input, select{width:100%; background:#0f1521; border:1px solid #1f2a3a; color:var(--txt);}
-.light input, .light select { background:#f8f9fb; border:1px solid #ccc; color:#111; }
-button{border:none; cursor:pointer;}
-.btn{background:#1a2333; color:#fff}
-.btn.primary{background:linear-gradient(180deg,#2a7cff,#1767ff)}
-.btn.danger{background:#3a1f26; color:#ffb3b3}
-.btn:hover { filter: brightness(1.2); }
-button:active { transform: scale(0.95); transition: transform 0.1s; }
-
-.modal{
-  display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-  background:rgba(0,0,0,.6); justify-content:center; align-items:center;
-}
-.modal-content{
-  background:var(--card); border-radius:var(--radius); padding:24px;
-  width:90%; max-width:400px; box-shadow:var(--shadow); text-align:center; position:relative;
-  transition:background .3s,color .3s;
-}
-.modal-content h2{margin-bottom:16px; color:#2a7cff}
-.modal-content input{margin-bottom:12px}
-.close-btn{
-  position:absolute; top:12px; right:12px; font-size:20px; color:var(--muted);
-  background:none; border:none; cursor:pointer;
-}
-.nav-item.disabled { pointer-events: none; opacity: 0.5; }
-
-.logo-dark { display:block; }
-.logo-light { display:none; }
-.light .logo-dark { display:none; }
-.light .logo-light { display:block; }
-
-/* Ícone do usuário */
-#userBtn svg { color:#fff; transition: color 0.3s; }
-body.light #userBtn svg { color:#000; }
-
-/* Campo de senha c/ olhinho */
-.password-wrap{ position:relative; width:100%; }
-.password-wrap input{ padding-right:42px; }
-#togglePassword{
-  position:absolute; right:10px; top:50%; transform:translateY(-50%);
-  cursor:pointer; font-size:18px; user-select:none;
-}
-
-/* Rodapé (transparente) */
-.footer{ text-align: center;background: transparent;}
-.footer-content{ display:flex; flex-direction:row; align-items:center; justify-content:center; }
-.footer-logo{ max-width:100px; width:100%; height:auto;}
-.footer-text{ font-size:.9rem; max-width:360px; line-height:1.4; margin-bottom: 5px; color:var(--muted); margin-left: -20px;}
-
-/* Cores do histórico */
-.tx-entrada{ color: var(--acc); font-weight:700; }
-.tx-saida{ color: var(--warn); font-weight:700; }
-</style>
+  <!-- Chart.js para os gráficos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-<header>
-  <img src="/img/logo1.png" alt="myBank Logo Dark" class="logo-img logo-dark"/>
-  <img src="/img/logo3.png" alt="myBank Logo Light" class="logo-img logo-light"/>
 
-  <div class="subtitle">Carteira, guardado, transações e relatórios mensais.</div>
-  
-  <button id="userBtn" style="position:absolute; top:16px; right:60px; background:none; border:none; cursor:pointer;">
-    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/>
-    </svg>
-  </button>
+  <header>
+    <img src="/img/logo1.png" alt="myBank Logo Dark" class="logo-img logo-dark" />
+    <img src="/img/logo3.png" alt="myBank Logo Light" class="logo-img logo-light" />
+    <div class="subtitle">Carteira, guardado, transações e relatórios mensais.</div>
+    <button id="userBtn" style="position:absolute; top:16px; right:60px; background:none; border:none; cursor:pointer;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 24 24">
+        <path
+          d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z" />
+      </svg>
+    </button>
+    <button id="themeToggle"
+      style="position:absolute; top:16px; right:16px; background:none; border:none; cursor:pointer;"
+      aria-label="Trocar tema">🌙</button>
+  </header>
 
-  <button id="themeToggle" style="position:absolute; top:16px; right:16px; background:none; border:none; cursor:pointer;" aria-label="Trocar tema">
-    🌙
-  </button>
-</header>
-
-<!-- Modal Login -->
-<div id="loginModal" class="modal" aria-hidden="true">
-  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
-    <button class="close-btn" id="closeLogin" aria-label="Fechar">✖</button>
-    <div id="authArea">
-      <h2 id="loginTitle">Login</h2>
-      <input type="email" id="loginEmail" placeholder="Seu email" autocomplete="username" />
-      <div class="password-wrap">
-        <input type="password" id="loginPassword" placeholder="Sua senha" autocomplete="current-password"/>
-        <span id="togglePassword" title="Mostrar/ocultar senha" aria-label="Mostrar/ocultar senha">👁️</span>
+  <!-- Modal Login -->
+  <div id="loginModal" class="modal" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+      <button class="close-btn" id="closeLogin" aria-label="Fechar">✖</button>
+      <div id="authArea">
+        <h2 id="loginTitle">Login</h2>
+        <input type="email" id="loginEmail" placeholder="Seu email" autocomplete="username" />
+        <div class="password-wrap">
+          <input type="password" id="loginPassword" placeholder="Sua senha" autocomplete="current-password" />
+          <span id="togglePassword" title="Mostrar/ocultar senha" aria-label="Mostrar/ocultar senha">👁️</span>
+        </div>
+        <button class="btn primary" id="loginBtn" style="width:100%;margin-top:10px">Entrar</button>
+        <button class="btn" id="registerBtn" style="width:100%;margin-top:10px">Criar conta</button>
       </div>
-      <button class="btn primary" id="loginBtn" style="width:100%;margin-top:10px">Entrar</button>
-      <button class="btn" id="registerBtn" style="width:100%;margin-top:10px">Criar conta</button>
-    </div>
-    <div id="userArea" style="display:none;">
-      <h2>Bem-vindo!</h2>
-      <p id="userEmail" class="hint"></p>
-      <button class="btn danger" id="logoutBtn" style="width:100%;margin-top:10px">Sair</button>
-    </div>
-  </div>
-</div>
-
-<nav class="navbar">
-  <button class="nav-item active" data-tab="tab-saldos">Saldos</button>
-  <button class="nav-item" data-tab="tab-inicio">Ganhos</button>
-  <button class="nav-item" data-tab="tab-transacoes">Transações</button>
-  <button class="nav-item" data-tab="tab-relatorios">Relatórios</button>
-  <button class="nav-item" data-tab="tab-ferramentas">Ferramentas</button>
-</nav>
-
-<main>
-  <!-- SALDOS -->
-  <div id="tab-saldos" class="tab active">
-    <div class="card">
-      <h2>Saldos</h2>
-      <p>Carteira (disponível)</p>
-      <div id="walletValue" class="value positive">R$ 0,00</div>
-      <hr>
-      <p>Guardado</p>
-      <div id="savingsValue" class="value">R$ 0,00</div>
-      <hr>
-      <p>Total</p>
-      <div id="totalValue" class="value">R$ 0,00</div>
+      <div id="userArea" style="display:none;">
+        <h2>Bem-vindo!</h2>
+        <p id="userEmail" class="hint"></p>
+        <button class="btn danger" id="logoutBtn" style="width:100%;margin-top:10px">Sair</button>
+      </div>
     </div>
   </div>
 
-  <!-- GANHOS -->
-  <div id="tab-inicio" class="tab">
-    <div class="card">
-      <h2>Iniciar mês</h2>
-      <label>Salário do mês</label>
-      <input type="number" step="0.01" id="salaryInput" placeholder="Ex: 2000,00" inputmode="decimal"/>
-      <button class="btn primary" style="margin-top:10px;width:100%" onclick="applySalary()">Aplicar salário</button>
-      <hr>
-      <label>Definir valor já guardado</label>
-      <input type="number" step="0.01" id="savingsInput" placeholder="Ex: 500,00" inputmode="decimal"/>
-      <button class="btn" style="margin-top:10px;width:100%" onclick="applySavings()">Aplicar guardado</button>
-    </div>
-  </div>
+  <nav class="navbar">
+    <button class="nav-item active" data-tab="tab-saldos">Saldos</button>
+    <button class="nav-item" data-tab="tab-inicio">Ganhos</button>
+    <button class="nav-item" data-tab="tab-transacoes">Transações</button>
+    <button class="nav-item" data-tab="tab-relatorios">Relatórios</button>
+    <button class="nav-item" data-tab="tab-ferramentas">Ferramentas</button>
+  </nav>
 
-  <!-- TRANSAÇÕES -->
-  <div id="tab-transacoes" class="tab">
-    <div class="card">
-      <h2>Transações</h2>
-      <label>Tipo</label>
-      <select id="txType">
-        <option value="saida">Saída</option>
-        <option value="entrada">Entrada</option>
-        <option value="save">Guardar</option>
-        <option value="withdraw">Resgatar</option>
-      </select>
-      <label>Valor</label>
-      <input type="number" step="0.01" id="txAmount" placeholder="0,00" inputmode="decimal"/>
-      <label>Descrição</label>
-      <input type="text" id="txDesc" placeholder="Ex: Mercado"/>
-      <button class="btn primary" style="margin-top:10px;width:100%" onclick="addTransaction()">Adicionar</button>
+  <main>
+    <!-- SALDOS -->
+    <div id="tab-saldos" class="tab active">
+      <div class="card">
+        <h2>Saldos</h2>
+        <p>Carteira (disponível)</p>
+        <div id="walletValue" class="value positive">R$ 0,00</div>
+        <hr>
+        <p>Guardado</p>
+        <div id="savingsValue" class="value">R$ 0,00</div>
+        <hr>
+        <p>Total</p>
+        <div id="totalValue" class="value">R$ 0,00</div>
+      </div>
     </div>
 
-    <div id="txHistory" class="card" style="margin-top:20px;">
-      <!-- Histórico renderizado via JS -->
+    <!-- INÍCIO (salário/guardado) -->
+    <div id="tab-inicio" class="tab">
+      <div class="card">
+        <h2>Iniciar mês</h2>
+        <label>Salário do mês</label>
+        <input type="number" step="0.01" id="salaryInput" placeholder="Ex: 2000,00" inputmode="decimal" />
+        <button class="btn primary" style="margin-top:10px;width:100%" onclick="applySalary()">Aplicar salário</button>
+        <hr>
+        <label>Definir valor já guardado</label>
+        <input type="number" step="0.01" id="savingsInput" placeholder="Ex: 500,00" inputmode="decimal" />
+        <button class="btn" style="margin-top:10px;width:100%" onclick="applySavings()">Aplicar guardado</button>
+      </div>
     </div>
-  </div>
 
-  <!-- RELATÓRIOS -->
-  <div id="tab-relatorios" class="tab">
-    <div class="card">
-      <h2>Relatórios mensais</h2>
-      <input type="month" id="reportMonth" onchange="updateReport()" style="margin:10px 0;"/>
-      <p id="reportText" class="hint">Resumo dos dados aparecerá aqui.</p>
+    <!-- TRANSAÇÕES -->
+    <div id="tab-transacoes" class="tab">
+      <div class="card">
+        <h2>Transações</h2>
+        <label>Tipo</label>
+        <select id="txType">
+          <option value="saida">Saída</option>
+          <option value="entrada">Entrada</option>
+          <option value="save">Guardar</option>
+          <option value="withdraw">Resgatar</option>
+        </select>
+
+        <label>Categoria</label>
+        <select id="txCat">
+          <option value="Diversos" selected>Diversos</option>
+          <option value="Amigos">Amigos</option>
+          <option value="Moradia">Moradia</option>
+          <option value="Alimentação">Alimentação</option>
+          <option value="Transporte">Transporte</option>
+          <option value="Lazer">Lazer</option>
+          <option value="Saúde">Saúde</option>
+          <option value="Educação">Educação</option>
+          <option value="Outros">Outros</option>
+        </select>
+
+        <label>Valor</label>
+        <input type="number" step="0.01" id="txAmount" placeholder="0,00" inputmode="decimal" />
+        <label>Descrição</label>
+        <input type="text" id="txDesc" placeholder="Ex: Mercado" />
+        <button class="btn primary" style="margin-top:10px;width:100%" onclick="addTransaction()">Adicionar</button>
+      </div>
+
+      <div id="txHistory" class="card" style="margin-top:20px;"></div>
     </div>
-  </div>
 
-  <!-- FERRAMENTAS -->
-  <div id="tab-ferramentas" class="tab">
-    <div class="card">
-      <h2>Ferramentas</h2>
-      <button class="btn danger" style="width:100%" onclick="resetAll()">Zerar tudo</button>
+    <!-- RELATÓRIOS -->
+    <div id="tab-relatorios" class="tab">
+      <div class="card">
+        <h2>Relatórios mensais</h2>
+        <input type="month" id="reportMonth" onchange="updateReport()" style="margin:10px 0;" />
+        <div id="alerts"></div>
+
+        <div class="grid">
+          <div class="card">
+            <h3 style="margin-top:0">Entradas x Saídas</h3>
+            <canvas id="chartBarInOut" height="220"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-top:0">Saldo ao longo do mês</h3>
+          <canvas id="chartLineBalance" height="240"></canvas>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3 style="margin-top:0">Top 5 saídas (descrições)</h3>
+            <div id="topList" class="hint"></div>
+          </div>
+          <div class="card">
+            <h3 style="margin-top:0">Orçamentos do mês</h3>
+            <div id="budgetsSummary" class="hint"></div>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-</main>
 
-<footer class="footer">
-  <div class="footer-content">
-    <img src="/img/logo2.png" alt="myBank Logo Dark" class="footer-logo logo-dark"/>
-    <img src="/img/logo4.png" alt="myBank Logo Light" class="footer-logo logo-light"/>
-    <p class="footer-text">
-      o <strong>myBank</strong> te ajuda a cuidar do seu dinheiro, te deixando mais tranquilo e confiante.
-    </p>
-  </div>
-</footer>
+    <!-- FERRAMENTAS (orçamentos + meta) -->
+    <div id="tab-ferramentas" class="tab">
+      <div class="card">
+        <h2>Orçamentos por categoria</h2>
+        <div class="grid">
+          <div>
+            <label>Categoria</label>
+            <select id="budgetCat">
+              <option>Diversos</option>
+              <option>Amigos</option>
+              <option>Moradia</option>
+              <option>Alimentação</option>
+              <option>Transporte</option>
+              <option>Lazer</option>
+              <option>Saúde</option>
+              <option>Educação</option>
+              <option>Outros</option>
+            </select>
+          </div>
+          <div>
+            <label>Valor mensal (R$)</label>
+            <input type="number" step="0.01" id="budgetValue" placeholder="Ex: 300,00" inputmode="decimal">
+          </div>
+        </div>
+        <button class="btn" style="margin-top:10px" onclick="setBudget()">Definir orçamento</button>
+        <div id="budgetsList" class="hint" style="margin-top:10px"></div>
+      </div>
 
-<!-- Firebase + App -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
-import { 
-  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, 
-  signOut, onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
-import { 
-  getFirestore, doc, setDoc, getDoc 
-} from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+      <div class="card">
+        <h2>Meta de economia</h2>
+        <div class="grid">
+          <div>
+            <label>Valor alvo (R$)</label>
+            <input type="number" step="0.01" id="goalTarget" placeholder="Ex: 1000,00" inputmode="decimal">
+          </div>
+          <div>
+            <label>Prazo (mês)</label>
+            <input type="month" id="goalDeadline">
+          </div>
+        </div>
+        <button class="btn" style="margin-top:10px" onclick="saveGoal()">Salvar meta</button>
+        <div id="goalBox" style="margin-top:10px"></div>
+      </div>
 
-/* ===== CONFIG FIREBASE ===== */
-const firebaseConfig = {
-  apiKey: "AIzaSyDhD7P4n0p4reF5HHY1vx5HRxRQyG3paNA",
-  authDomain: "mybank-63ff2.firebaseapp.com",
-  projectId: "mybank-63ff2",
-  storageBucket: "mybank-63ff2.appspot.com",
-  messagingSenderId: "389173665987",
-  appId: "1:389173665987:web:a86473d5a3b5bffce84276"
-};
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+      <div class="card">
+        <h2>Ferramentas</h2>
+        <button class="btn danger" style="width:100%" onclick="resetAll()">Zerar tudo</button>
+      </div>
+    </div>
+  </main>
 
-/* ===== REFERÊNCIAS ===== */
-const loginModal = document.getElementById("loginModal");
-const userBtn = document.getElementById("userBtn");
-const closeLogin = document.getElementById("closeLogin");
-const loginBtn = document.getElementById("loginBtn");
-const registerBtn = document.getElementById("registerBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const authArea = document.getElementById("authArea");
-const userArea = document.getElementById("userArea");
-const userEmail = document.getElementById("userEmail");
-const themeToggle = document.getElementById("themeToggle");
-const txHistory = document.getElementById("txHistory");
+  <footer class="footer">
+    <div class="footer-content">
+      <img src="/img/logo2.png" alt="myBank Logo Dark" class="footer-logo logo-dark" />
+      <img src="/img/logo4.png" alt="myBank Logo Light" class="footer-logo logo-light" />
+      <p class="footer-text">
+        o <strong>myBank</strong> te ajuda a cuidar do seu dinheiro, te deixando mais tranquilo e confiante.
+      </p>
+    </div>
+  </footer>
 
-/* ===== UI: tema + senha ===== */
-(function initTheme(){
-  const saved = localStorage.getItem("mybank-theme");
-  if(saved === "light"){ document.body.classList.add("light"); themeToggle.textContent = "☀️"; }
-})();
-themeToggle.addEventListener("click", () => {
-  document.body.classList.toggle("light");
-  const isLight = document.body.classList.contains("light");
-  themeToggle.textContent = isLight ? "☀️" : "🌙";
-  localStorage.setItem("mybank-theme", isLight ? "light" : "dark");
-});
-const passwordInput = document.getElementById("loginPassword");
-const togglePassword = document.getElementById("togglePassword");
-togglePassword.addEventListener("click", () => {
-  if (passwordInput.type === "password") {
-    passwordInput.type = "text";
-    togglePassword.textContent = "🙈";
-  } else {
-    passwordInput.type = "password";
-    togglePassword.textContent = "👁️";
-  }
-});
+  <!-- Firebase + App -->
+  <script type="module" src="script.js">
 
-/* ===== MODAL LOGIN ===== */
-userBtn.onclick = () => { loginModal.style.display = "flex"; loginModal.setAttribute("aria-hidden", "false"); };
-closeLogin.onclick = () => { loginModal.style.display = "none"; loginModal.setAttribute("aria-hidden", "true"); };
-window.addEventListener("click", (e) => {
-  if(e.target === loginModal){ loginModal.style.display = "none"; loginModal.setAttribute("aria-hidden", "true"); }
-});
+  </script>
 
-// Registro
-registerBtn.addEventListener("click", async () => {
-  const email = document.getElementById("loginEmail").value.trim();
-  const senha = document.getElementById("loginPassword").value;
-  if(!email || !senha){ alert("Preencha email e senha."); return; }
-  try{
-    const cred = await createUserWithEmailAndPassword(auth, email, senha);
-    await setDoc(doc(db, "users", cred.user.uid), { wallet: 0, savings: 0, transactions: [] }, { merge:true });
-    alert("Conta criada com sucesso!");
-  }catch(err){ alert(err.message); }
-});
-
-// Login
-loginBtn.addEventListener("click", async () => {
-  const email = document.getElementById("loginEmail").value.trim();
-  const senha = document.getElementById("loginPassword").value;
-  if(!email || !senha){ alert("Preencha email e senha."); return; }
-  try{
-    await signInWithEmailAndPassword(auth, email, senha);
-    alert("Login realizado!");
-  }catch(err){ alert(err.message); }
-});
-
-// Logout
-logoutBtn.addEventListener("click", async () => {
-  await signOut(auth);
-  alert("Saiu da conta.");
-});
-
-/* ===== ESTADO ===== */
-let currentUserId = null;
-let wallet = 0;
-let savings = 0;
-let transactions = [];
-
-const BRL = v => (Number(v)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
-
-/* ===== AUTH ===== */
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    currentUserId = user.uid;
-    authArea.style.display = "none";
-    userArea.style.display = "block";
-    userEmail.textContent = user.email;
-    loginModal.style.display = "none";
-    loginModal.setAttribute("aria-hidden", "true");
-    document.querySelectorAll(".nav-item").forEach(i=>i.classList.remove("disabled"));
-
-    const ref = doc(db, "users", user.uid);
-    const snap = await getDoc(ref);
-    if (snap.exists()) {
-      const data = snap.data();
-      wallet = Number(data.wallet)||0;
-      savings = Number(data.savings)||0;
-      transactions = Array.isArray(data.transactions) ? data.transactions : [];
-    } else {
-      await setDoc(ref, { wallet:0, savings:0, transactions:[] }, {merge:true});
-      wallet=0; savings=0; transactions=[];
+  <!-- Service Worker -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/service-worker.js")
+        .then(() => console.log("Service Worker registrado!"))
+        .catch(err => console.log("Erro no SW:", err));
     }
-    updateValues();
-    renderTransactions();
-  } else {
-    currentUserId = null;
-    authArea.style.display = "block";
-    userArea.style.display = "none";
-    loginModal.style.display = "flex";
-    loginModal.setAttribute("aria-hidden", "false");
-    document.querySelectorAll(".nav-item").forEach(i=>i.classList.add("disabled"));
-    wallet=0; savings=0; transactions=[];
-    updateValues();
-    txHistory.innerHTML="";
-  }
-});
-
-/* ===== NAVEGAÇÃO ===== */
-document.querySelectorAll(".nav-item").forEach(btn => {
-  btn.addEventListener("click", () => {
-    if(btn.classList.contains("disabled")) return;
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active"));
-    document.getElementById(btn.dataset.tab).classList.add("active");
-    btn.classList.add("active");
-  });
-});
-
-/* ===== FUNÇÕES ===== */
-function updateValues() {
-  const total = wallet + savings;
-  document.getElementById("walletValue").textContent = BRL(wallet);
-  document.getElementById("savingsValue").textContent = BRL(savings);
-  document.getElementById("totalValue").textContent   = BRL(total);
-}
-
-function renderTransactions() {
-  txHistory.innerHTML = "<h2 style='margin-top:0;color:#2a7cff'>Histórico</h2>";
-  if (!transactions.length) {
-    txHistory.innerHTML += "<p class='hint'>Nenhuma transação registrada.</p>";
-    return;
-  }
-  transactions.slice().reverse().forEach(tx => {
-    const isEntrada = tx.type === "entrada";
-    const isSaida = tx.type === "saida";
-    const label = isEntrada ? "ENTRADA" : (isSaida ? "SAÍDA" : tx.type.toUpperCase());
-    const cls = isEntrada ? "tx-entrada" : (isSaida ? "tx-saida" : "");
-    const div = document.createElement("div");
-    div.className = "tx-item";
-    div.style.marginBottom = "10px";
-    div.innerHTML = `
-      <strong class="${cls}">${label}</strong> • ${BRL(tx.amount)}
-      <br><small>${tx.desc || "Sem descrição"}</small>
-      <br><small>${new Date(tx.date).toLocaleString("pt-BR")}</small>
-      <hr style="border-color:var(--line)">
-    `;
-    txHistory.appendChild(div);
-  });
-}
-
-async function saveData() {
-  if (!currentUserId) return;
-  const ref = doc(db, "users", currentUserId);
-  await setDoc(ref, { wallet, savings, transactions }, { merge:true });
-}
-
-window.applySalary = async function () {
-  if(!currentUserId){ alert("Entre na sua conta para salvar."); return; }
-  const el = document.getElementById("salaryInput");
-  const salary = parseFloat((el.value||"").replace(',', '.'));
-  if (!isNaN(salary) && salary > 0) {
-    wallet += salary;
-    el.value = "";
-    updateValues();
-    await saveData();
-    alert("Salário adicionado!");
-  } else {
-    alert("Informe um valor válido.");
-  }
-};
-
-window.applySavings = async function () {
-  if(!currentUserId){ alert("Entre na sua conta para salvar."); return; }
-  const el = document.getElementById("savingsInput");
-  const saved = parseFloat((el.value||"").replace(',', '.'));
-  if (!isNaN(saved) && saved >= 0) {
-    savings = saved;
-    el.value = "";
-    updateValues();
-    await saveData();
-    alert("Guardado atualizado!");
-  } else {
-    alert("Informe um valor válido.");
-  }
-};
-
-window.addTransaction = async function () {
-  if(!currentUserId){ alert("Entre na sua conta para salvar."); return; }
-  const type = document.getElementById("txType").value; // "entrada" | "saida" | "save" | "withdraw"
-  const amountEl = document.getElementById("txAmount");
-  const descEl = document.getElementById("txDesc");
-  const amount = parseFloat((amountEl.value || "0").replace(',', '.'));
-  const desc = (descEl.value || "Sem descrição").trim();
-
-  if (isNaN(amount) || amount <= 0) { alert("Informe um valor válido."); return; }
-
-  // Regras de saldo
-  if (type === "saida" && wallet - amount < 0) { alert("Saldo insuficiente na carteira."); return; }
-  if (type === "save" && wallet - amount < 0) { alert("Saldo insuficiente para guardar."); return; }
-  if (type === "withdraw" && savings - amount < 0) { alert("Guardado insuficiente para resgatar."); return; }
-
-  // Aplica efeitos
-  if (type === "saida")   wallet -= amount;
-  if (type === "entrada") wallet += amount;
-  if (type === "save")   { wallet -= amount; savings += amount; }
-  if (type === "withdraw"){ savings -= amount; wallet += amount; }
-
-  transactions.push({ type, amount:Number(amount), desc, date: new Date().toISOString() });
-  amountEl.value = ""; descEl.value = "";
-  updateValues();
-  renderTransactions();
-  await saveData();
-  alert("Transação registrada!");
-};
-
-window.updateReport = function () {
-  const month = document.getElementById("reportMonth").value;
-  if (!month) {
-    document.getElementById("reportText").textContent = "Selecione um mês.";
-    return;
-  }
-  const filtered = transactions.filter(tx => (tx.date || "").slice(0, 7) === month);
-  let income = 0, expense = 0;
-  filtered.forEach(tx => {
-    if (tx.type === "entrada") income += Number(tx.amount)||0;
-    if (tx.type === "saida")   expense += Number(tx.amount)||0;
-  });
-  document.getElementById("reportText").textContent =
-    `No mês ${month}, entradas: ${BRL(income)}, saídas: ${BRL(expense)}.`;
-};
-
-window.resetAll = async function () {
-  if(!currentUserId){ alert("Entre na sua conta."); return; }
-  if (confirm("Deseja realmente apagar todos os dados?")) {
-    wallet = 0; savings = 0; transactions = [];
-    updateValues(); renderTransactions();
-    await saveData();
-    alert("Todos os dados foram zerados.");
-  }
-};
-
-updateValues();
-</script>
-
-<!-- Service Worker -->
-<script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/service-worker.js")
-    .then(() => console.log("Service Worker registrado!"))
-    .catch(err => console.log("Erro no SW:", err));
-}
-</script>
+  </script>
 </body>
+
 </html>
