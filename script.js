@@ -36,6 +36,8 @@ const goalBox = document.getElementById("goalBox");
 const topList = document.getElementById("topList");       // legado (saídas)
 const topListIn = document.getElementById("topListIn");   // se existir
 const topListOut = document.getElementById("topListOut"); // se existir
+const closeMonthBtn = document.getElementById("closeMonthBtn");
+const reportMonthEl = document.getElementById("reportMonth");
 
 /* ===== THEME + SENHA ===== */
 (function initTheme(){
@@ -76,7 +78,7 @@ if (registerBtn) {
     if(!email || !senha){ alert("Preencha email e senha."); return; }
     try{
       const cred = await createUserWithEmailAndPassword(auth, email, senha);
-      await setDoc(doc(db, "users", cred.user.uid), { wallet: 0, savings: 0, transactions: [], budgets:{}, goal:null }, { merge:true });
+      await setDoc(doc(db, "users", cred.user.uid), { wallet: 0, savings: 0, transactions: [], budgets:{}, goal:null, archives:{} }, { merge:true });
       alert("Conta criada com sucesso!");
     }catch(err){ alert(err.message); }
   });
@@ -99,14 +101,25 @@ if (logoutBtn) {
 let currentUserId = null;
 let wallet = 0;
 let savings = 0;
-/** transactions: {type: "entrada"|"saida"|"save"|"withdraw", amount:number, desc:string, cat?:string, date: ISOString}[] */
+/** transactions: {type:"entrada"|"saida"|"save"|"withdraw", amount:number, desc:string, cat?:string, date:ISOString}[] */
 let transactions = [];
 /** budgets: { [cat:string]: number } */
 let budgets = {};
 /** goal: { target:number, deadline?: "YYYY-MM" } | null */
 let goal = null;
+/** archives: { [YYYY-MM]: Transaction[] }  -> histórico fechado por mês */
+let archives = {};
 
 const BRL = v => (Number(v)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+
+/* ===== HELPERS ===== */
+const ym = (d) => (d instanceof Date ? d.toISOString() : String(d)).slice(0,7);
+const nextMonth = (yyyyMm) => {
+  const [Y,M] = yyyyMm.split("-").map(Number);
+  const d = new Date(Y, M-1, 1);
+  d.setMonth(d.getMonth()+1);
+  return d.toISOString().slice(0,7);
+};
 
 /* ===== AUTH ===== */
 onAuthStateChanged(auth, async (user) => {
@@ -128,10 +141,13 @@ onAuthStateChanged(auth, async (user) => {
       transactions = Array.isArray(data.transactions) ? data.transactions : [];
       budgets = data.budgets || {};
       goal = data.goal || null;
+      archives = data.archives || {};
     } else {
-      await setDoc(ref, { wallet:0, savings:0, transactions:[], budgets:{}, goal:null }, {merge:true});
-      wallet=0; savings=0; transactions=[]; budgets={}; goal=null;
+      await setDoc(ref, { wallet:0, savings:0, transactions:[], budgets:{}, goal:null, archives:{} }, {merge:true});
+      wallet=0; savings=0; transactions=[]; budgets={}; goal=null; archives={};
     }
+    // define mês atual no input (se vazio)
+    if (reportMonthEl && !reportMonthEl.value) reportMonthEl.value = ym(new Date());
     updateValues();
     renderTransactions();
     renderBudgetsList();
@@ -144,7 +160,7 @@ onAuthStateChanged(auth, async (user) => {
     loginModal.style.display = "flex";
     loginModal.setAttribute("aria-hidden", "false");
     document.querySelectorAll(".nav-item").forEach(i=>i.classList.add("disabled"));
-    wallet=0; savings=0; transactions=[]; budgets={}; goal=null;
+    wallet=0; savings=0; transactions=[]; budgets={}; goal=null; archives={};
     updateValues();
     if (txHistory) txHistory.innerHTML="";
     if (alertsBox) alertsBox.innerHTML="";
@@ -196,7 +212,7 @@ function renderTransactions() {
 async function saveData() {
   if (!currentUserId) return;
   const ref = doc(db, "users", currentUserId);
-  await setDoc(ref, { wallet, savings, transactions, budgets, goal }, { merge:true });
+  await setDoc(ref, { wallet, savings, transactions, budgets, goal, archives }, { merge:true });
 }
 
 /* ===== AÇÕES ===== */
@@ -265,22 +281,24 @@ function sum(arr){ return arr.reduce((a,b)=>a+b,0); }
 window.updateReport = function(){
   if (!alertsBox || !budgetsSummary) return;
 
-  if(!transactions.length){
-    alertsBox.innerHTML="";
+  // mês selecionado no seletor (ou atual)
+  const month = (reportMonthEl && reportMonthEl.value) ? reportMonthEl.value : ym(new Date());
+
+  // pega transações do mês (ativas) + as arquivadas desse mês
+  const activeList = transactions.filter(tx => (tx.date||"").slice(0,7)===month);
+  const archivedList = Array.isArray(archives[month]) ? archives[month] : [];
+  const list = [...activeList, ...archivedList].sort((a,b)=>a.date.localeCompare(b.date));
+
+  if(!list.length){
+    alertsBox.innerHTML = `<div class="banner ok">Sem movimentos neste mês.</div>`;
     destroyCharts();
     budgetsSummary.innerHTML="";
     if (topList) topList.innerHTML="";
     if (topListIn) topListIn.innerHTML="";
     if (topListOut) topListOut.innerHTML="";
+    // ainda desenha gráficos vazios? melhor não.
     return;
   }
-  const monthEl = document.getElementById("reportMonth");
-  const month = (monthEl && monthEl.value) ? monthEl.value : new Date().toISOString().slice(0,7);
-
-  // Filtra mês
-  const list = transactions
-    .filter(tx => (tx.date||"").slice(0,7)===month)
-    .sort((a,b)=>a.date.localeCompare(b.date));
 
   // Entradas/saídas totais
   const incomesList  = list.filter(t=>t.type==="entrada");
@@ -288,7 +306,7 @@ window.updateReport = function(){
   const totalIn = sum(incomesList.map(t=>+t.amount));
   const totalOut = sum(expensesList.map(t=>+t.amount));
 
-  // Agrupar por DESCRIÇÃO (para tops)
+  // Agrupar por DESCRIÇÃO (tops)
   const groupByDesc = (arr) => {
     const map = {};
     arr.forEach(t=>{
@@ -309,7 +327,7 @@ window.updateReport = function(){
   if (topListOut) topListOut.innerHTML = toTopListHTML(expByDesc);
   if (topList && !topListOut) topList.innerHTML = toTopListHTML(expByDesc);
 
-  // Saldo diário do mês
+  // Saldo diário do mês (com base na lista combinada)
   const days = [...new Set(list.map(t=>t.date.slice(0,10)))].sort();
   let run = 0; const lineX=[], lineY=[];
   days.forEach(day=>{
@@ -337,7 +355,7 @@ window.updateReport = function(){
   });
   if(goal && goal.target){
     const pct = Math.min(100, Math.round((savings/goal.target)*100));
-    const nowM = (new Date()).toISOString().slice(0,7);
+    const nowM = ym(new Date());
     if(goal.deadline && month===nowM && pct < 50) alerts.push(`Meta de economia em ${pct}% — acelere para atingir até ${goal.deadline}.`);
   }
   alertsBox.innerHTML = alerts.map(a=>`<div class="banner warn">${a}</div>`).join("") || `<div class="banner ok">Tudo sob controle neste mês. 🎯</div>`;
@@ -355,9 +373,8 @@ window.updateReport = function(){
   destroyCharts();
 
   const ctxBarEl  = document.getElementById("chartBarInOut");
-  const ctxPieIn  = document.getElementById("chartPieIncomes");   // pode não existir no HTML
-  const ctxPieOut = document.getElementById("chartPieExpenses");  // EXISTE no HTML
-  const ctxLineEl = document.getElementById("chartLineBalance");  // EXISTE no HTML
+  const ctxPieOut = document.getElementById("chartPieExpenses");
+  const ctxLineEl = document.getElementById("chartLineBalance");
 
   // Barras: Entradas x Saídas
   if (ctxBarEl) {
@@ -370,21 +387,21 @@ window.updateReport = function(){
     });
   }
 
-  // Pizza de ENTRADAS (por descrição) — opcional
-  if (ctxPieIn) {
-    const labelsIn = Object.keys(incByDesc).map(s=>s || "Sem descrição");
-    const dataIn   = Object.values(incByDesc).map(v=>Number(v)||0);
-    const ctx = ctxPieIn.getContext("2d");
-    chartPieIn = new Chart(ctx,{
+  // Pizza de SAÍDAS (por categoria)
+  if (ctxPieOut) {
+    const labelsOut = Object.keys(byCat);
+    const dataOut   = Object.values(byCat).map(v=>Number(v)||0);
+    const ctx = ctxPieOut.getContext("2d");
+    chartPieOut = new Chart(ctx,{
       type:"pie",
-      data:{ labels: labelsIn, datasets:[{ data: dataIn }] },
+      data:{ labels: labelsOut, datasets:[{ data: dataOut }] },
       options:{ responsive:true,
         elements:{ arc:{ borderWidth:2, borderColor:"rgba(255,255,255,.12)" } },
         plugins:{ legend:{position:"bottom"}, tooltip:{ callbacks:{ label:(c)=> `${c.label}: ${BRL(c.parsed)}` } } } }
     });
   }
 
-  // Linha: saldo ao longo do mês (chartLineBalance)
+  // Linha: saldo ao longo do mês
   if (ctxLineEl) {
     const ctxLine = ctxLineEl.getContext("2d");
     chartLine = new Chart(ctxLine,{
@@ -395,6 +412,41 @@ window.updateReport = function(){
     });
   }
 };
+
+/* ===== TROCAR/FECHAR MÊS ===== */
+async function closeMonth(monthToClose){
+  if(!currentUserId){ alert("Entre na sua conta."); return; }
+  const month = monthToClose || (reportMonthEl?.value || ym(new Date()));
+  // pega apenas transações do mês selecionado
+  const toArchive = transactions.filter(tx => (tx.date||"").slice(0,7) === month);
+  if(!toArchive.length){
+    alert("Não há movimentos para arquivar neste mês.");
+    return;
+  }
+  const ok = confirm(`Fechar o mês de ${month}? As transações serão arquivadas e o novo mês começará zerado.`);
+  if(!ok) return;
+
+  // move para arquivo
+  archives[month] = (archives[month] || []).concat(toArchive);
+  // remove da lista ativa
+  transactions = transactions.filter(tx => (tx.date||"").slice(0,7) !== month);
+
+  await saveData();
+
+  // se o seletor está no mês fechado, pula para o próximo
+  if (reportMonthEl && (!reportMonthEl.value || reportMonthEl.value === month)) {
+    reportMonthEl.value = nextMonth(month);
+  }
+
+  renderTransactions(); // histórico “ativo” fica limpo daquele mês
+  updateReport();
+  alert(`Mês ${month} fechado. O próximo mês começou do zero.`);
+}
+
+// liga o botão se existir
+if (closeMonthBtn) {
+  closeMonthBtn.addEventListener("click", () => closeMonth(reportMonthEl?.value));
+}
 
 /* ===== ORÇAMENTOS ===== */
 window.setBudget = async function(){
@@ -444,17 +496,16 @@ function renderGoalBox(){
 /* ===== ZERAR TUDO ===== */
 window.resetAll = async function(){
   if(!currentUserId){ alert("Entre na sua conta."); return; }
-  const ok = confirm("Deseja realmente apagar todos os dados (carteira, guardado, transações, orçamentos e metas)?");
+  const ok = confirm("Deseja realmente apagar todos os dados (carteira, guardado, transações, orçamentos, metas e arquivos de meses)?");
   if(!ok) return;
 
-  // Limpa estado local
   wallet = 0;
   savings = 0;
   transactions = [];
   budgets = {};
   goal = null;
+  archives = {};
 
-  // Atualiza UI imediatamente
   updateValues();
   renderTransactions();
   renderBudgetsList();
@@ -465,10 +516,9 @@ window.resetAll = async function(){
   if (topListIn) topListIn.innerHTML = "";
   if (topListOut) topListOut.innerHTML = "";
 
-  // Persiste no Firestore
   try{
     const ref = doc(db, "users", currentUserId);
-    await setDoc(ref, { wallet:0, savings:0, transactions:[], budgets:{}, goal:null }, { merge:true });
+    await setDoc(ref, { wallet:0, savings:0, transactions:[], budgets:{}, goal:null, archives:{} }, { merge:true });
     updateReport();
     alert("Todos os dados foram zerados.");
   }catch(err){

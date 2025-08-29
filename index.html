@@ -137,7 +137,10 @@
     <div id="tab-relatorios" class="tab">
       <div class="card">
         <h2>Relatórios mensais</h2>
-        <input type="month" id="reportMonth" onchange="updateReport()" style="margin:10px 0;" />
+        <div class="trocando">
+        <input type="month" id="reportMonth" onchange="updateReport()" style="margin:10px 0; width: 70%;" />
+        <button class="btn" id="closeMonthBtn" style="margin:10px 0; width: 30%;">Trocar mês</button>
+        </div>
         <div id="alerts"></div>
 
         <div class="grid">

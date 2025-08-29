@@ -120,3 +120,8 @@ body.light #userBtn svg { color:#000; }
 }
 .banner.warn{ border-color:#3a1f26; color:#ffb3b3; }
 .banner.ok{ border-color:#1e4734; color:#9de5c0; }
+.trocando{
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
